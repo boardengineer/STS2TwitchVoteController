@@ -176,6 +176,7 @@ public class VoteExecutioner
         _displayTimer?.Stop();
         if (_timerLabel != null)
             _timerLabel.Visible = false;
+        CardVoteOverlay.ClearLabels();
     }
 
     private void UpdateTimerDisplay()
@@ -185,5 +186,8 @@ public class VoteExecutioner
 
         var remaining = Math.Ceiling(_voteTimer.TimeLeft);
         _timerLabel.Text = $"Vote: {remaining:0}s";
+
+        if (_voteActive && _options.Any(o => o is PlayCardCommand))
+            CardVoteOverlay.Refresh(_options, _votes);
     }
 }

@@ -91,7 +91,9 @@ public class Plugin
 
         CombatOverlay.Refresh();
 
-        var sorted = commands.OrderBy(c => CommandDescriber.Describe(c)).ToList();
+        var sorted = commands
+            .OrderBy(c => CommandDescriber.GetSortKey(c))
+            .ToList();
         _voteExecutioner.StartVote(sorted);
     }
 }
@@ -108,13 +110,31 @@ public class MainMenuPatch
 }
 
 [HarmonyPatch(typeof(RunManager), nameof(RunManager.SetUpNewSinglePlayer))]
-public class RunStartPatch
+public class NewRunStartPatch
+{
+    [HarmonyPrefix]
+    public static void Prefix()
+    {
+        RunStartHelper.Activate();
+    }
+}
+
+[HarmonyPatch(typeof(RunManager), nameof(RunManager.SetUpSavedSinglePlayer))]
+public class SavedRunStartPatch
+{
+    [HarmonyPrefix]
+    public static void Prefix()
+    {
+        RunStartHelper.Activate();
+    }
+}
+
+static class RunStartHelper
 {
     private static readonly FieldInfo? ReplayActiveField =
         typeof(ReplayEngine).GetField("_replayActive", BindingFlags.Static | BindingFlags.NonPublic);
 
-    [HarmonyPrefix]
-    public static void Prefix()
+    public static void Activate()
     {
         ReplayActiveField?.SetValue(null, true);
         ReplayDispatcher.GameSpeed = 1.0f;
