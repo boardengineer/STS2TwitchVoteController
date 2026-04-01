@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -7,9 +6,8 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Nodes;
-using MegaCrit.Sts2.Core.Nodes.Debug;
+using MegaCrit.Sts2.Core.Runs;
 using RunReplays;
-using RunReplays.Commands;
 
 namespace STS2Twitch;
 
@@ -17,9 +15,8 @@ namespace STS2Twitch;
 public class Plugin
 {
     private static TwitchIrcClient? _ircClient;
-    private static Timer? _flushTimer;
+    private static VoteExecutioner? _voteExecutioner;
     private static bool _signalConnected;
-    private static List<ReplayCommand>? _availableCommands;
 
     public static void Initialize()
     {
@@ -48,25 +45,19 @@ public class Plugin
         }
 
         _ircClient = new TwitchIrcClient(config);
+        _voteExecutioner = new VoteExecutioner();
         _ircClient.OnMessageReceived += (username, message) =>
         {
-            DevConsoleLogger.Enqueue($"[Chat] {username}: {message}");
+            PlayerActionBuffer.LogMigrationWarning($"[Chat] {username}: {message}");
+            _voteExecutioner.OnChatMessage(username, message);
         };
         _ircClient.Start();
         GD.Print("[TwitchVoteController] IRC client started.");
     }
 
-    public static void SetupFlushTimer(Node parent)
+    public static void SetupVoteExecutioner(Node parent)
     {
-        if (_flushTimer != null)
-            return;
-
-        _flushTimer = new Timer();
-        _flushTimer.WaitTime = 0.1;
-        _flushTimer.Autostart = true;
-        _flushTimer.Timeout += DevConsoleLogger.FlushToConsole;
-        parent.AddChild(_flushTimer);
-        GD.Print("[TwitchVoteController] Flush timer created.");
+        _voteExecutioner?.Initialize(_ircClient!, parent);
     }
 
     public static void TryConnectSignal()
@@ -89,7 +80,9 @@ public class Plugin
 
     private static void OnInputRequired()
     {
-        if (_ircClient == null)
+        PlayerActionBuffer.LogMigrationWarning("[TwitchVoteController] InputRequired signal received.");
+
+        if (_voteExecutioner == null)
             return;
 
         var commands = ReplayDispatcher.GetAvailableCommands();
@@ -98,18 +91,8 @@ public class Plugin
 
         CombatOverlay.Refresh();
 
-        var descriptions = commands.Select(c => CommandDescriber.Describe(c)).OrderBy(d => d).ToList();
-        var lastDescriptions = _availableCommands?.Select(c => CommandDescriber.Describe(c)).OrderBy(d => d).ToList();
-
-        if (lastDescriptions != null && descriptions.SequenceEqual(lastDescriptions))
-            return;
-
-        _availableCommands = commands;
-
-        var indexed = descriptions.Select((d, i) => $"{i + 1}: {d}");
-        var message = "Available commands: " + string.Join(", ", indexed);
-        _ircClient.SendMessage(message);
-        DevConsoleLogger.Enqueue($"[TwitchVoteController] Sent to chat: {message}");
+        var sorted = commands.OrderBy(c => CommandDescriber.Describe(c)).ToList();
+        _voteExecutioner.StartVote(sorted);
     }
 }
 
@@ -119,8 +102,22 @@ public class MainMenuPatch
     [HarmonyPostfix]
     public static void Postfix(NGame __instance)
     {
-        DevConsoleLogger.FlushToConsole();
-        Plugin.SetupFlushTimer(__instance);
+        Plugin.SetupVoteExecutioner(__instance);
         Plugin.TryConnectSignal();
+    }
+}
+
+[HarmonyPatch(typeof(RunManager), nameof(RunManager.SetUpNewSinglePlayer))]
+public class RunStartPatch
+{
+    private static readonly FieldInfo? ReplayActiveField =
+        typeof(ReplayEngine).GetField("_replayActive", BindingFlags.Static | BindingFlags.NonPublic);
+
+    [HarmonyPrefix]
+    public static void Prefix()
+    {
+        ReplayActiveField?.SetValue(null, true);
+        ReplayDispatcher.GameSpeed = 1.0f;
+        GD.Print("[TwitchVoteController] ReplayActive set before run start.");
     }
 }

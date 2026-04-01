@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using RunReplays;
 
 namespace STS2Twitch;
 
@@ -50,7 +51,7 @@ public class TwitchIrcClient
             }
             catch (Exception ex)
             {
-                DevConsoleLogger.Enqueue($"[TwitchVoteController] Failed to send message: {ex.Message}");
+                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Failed to send message: {ex.Message}");
             }
         });
     }
@@ -69,7 +70,7 @@ public class TwitchIrcClient
         {
             try
             {
-                DevConsoleLogger.Enqueue($"[TwitchVoteController] Connecting to Twitch IRC (#{_channel})...");
+                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Connecting to Twitch IRC (#{_channel})...");
 
                 _client = new TcpClient();
                 await _client.ConnectAsync(TwitchIrcHost, TwitchIrcPort, ct);
@@ -83,7 +84,7 @@ public class TwitchIrcClient
                 await _writer.WriteLineAsync($"JOIN #{_channel}");
 
                 reconnectDelay = 5;
-                DevConsoleLogger.Enqueue($"[TwitchVoteController] Connected to #{_channel}!");
+                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Connected to #{_channel}!");
 
                 await ReadLoopAsync(ct);
             }
@@ -93,13 +94,13 @@ public class TwitchIrcClient
             }
             catch (Exception ex)
             {
-                DevConsoleLogger.Enqueue($"[TwitchVoteController] Connection error: {ex.Message}");
+                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Connection error: {ex.Message}");
                 Cleanup();
 
                 if (ct.IsCancellationRequested)
                     break;
 
-                DevConsoleLogger.Enqueue($"[TwitchVoteController] Reconnecting in {reconnectDelay}s...");
+                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Reconnecting in {reconnectDelay}s...");
                 try
                 {
                     await Task.Delay(reconnectDelay * 1000, ct);
@@ -114,7 +115,7 @@ public class TwitchIrcClient
         }
 
         Cleanup();
-        DevConsoleLogger.Enqueue("[TwitchVoteController] Disconnected from Twitch IRC.");
+        PlayerActionBuffer.LogMigrationWarning("[TwitchVoteController] Disconnected from Twitch IRC.");
     }
 
     private async Task ReadLoopAsync(CancellationToken ct)
@@ -133,7 +134,7 @@ public class TwitchIrcClient
 
             if (line.Contains("Login authentication failed"))
             {
-                DevConsoleLogger.Enqueue("[TwitchVoteController] Authentication failed. Check your OAuth token.");
+                PlayerActionBuffer.LogMigrationWarning("[TwitchVoteController] Authentication failed. Check your OAuth token.");
                 throw new InvalidOperationException("Auth failed");
             }
 
