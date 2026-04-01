@@ -96,6 +96,8 @@ public class Plugin
         if (commands == null || commands.Count == 0)
             return;
 
+        CombatOverlay.Refresh();
+
         var descriptions = commands.Select(c => CommandDescriber.Describe(c)).OrderBy(d => d).ToList();
         var lastDescriptions = _availableCommands?.Select(c => CommandDescriber.Describe(c)).OrderBy(d => d).ToList();
 
@@ -104,7 +106,8 @@ public class Plugin
 
         _availableCommands = commands;
 
-        var message = "Available commands: " + string.Join(", ", descriptions);
+        var indexed = descriptions.Select((d, i) => $"{i + 1}: {d}");
+        var message = "Available commands: " + string.Join(", ", indexed);
         _ircClient.SendMessage(message);
         DevConsoleLogger.Enqueue($"[TwitchVoteController] Sent to chat: {message}");
     }
