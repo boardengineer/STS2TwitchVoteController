@@ -13,7 +13,7 @@ public class VoteExecutioner
     private static readonly FieldInfo? ReplayActiveField =
         typeof(ReplayEngine).GetField("_replayActive", BindingFlags.Static | BindingFlags.NonPublic);
 
-    private const double VoteDuration = 10.0;
+    private const double VoteDuration = 5.0;
     private const double SingleOptionDelay = 2.0;
 
     private TwitchIrcClient? _ircClient;
@@ -23,6 +23,7 @@ public class VoteExecutioner
     private List<ReplayCommand> _options = new();
     private readonly Dictionary<string, int> _votes = new();
     private bool _voteActive;
+    public bool AwaitingMapMove { get; set; }
 
     public void Initialize(TwitchIrcClient client, Node timerParent)
     {
@@ -160,6 +161,12 @@ public class VoteExecutioner
         ReplayDispatcher.GameSpeed = 1.0f;
         var result = winner.Execute();
         ReplayDispatcher.ClearDispatchableCache();
+
+        if (winner is ProceedFromRewardsCommand)
+            AwaitingMapMove = true;
+        else if (winner is MapMoveCommand)
+            AwaitingMapMove = false;
+
         PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Executed: {winner} (success={result.Success})");
     }
 

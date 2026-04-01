@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -8,6 +9,7 @@ using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Runs;
 using RunReplays;
+using RunReplays.Commands;
 
 namespace STS2Twitch;
 
@@ -89,9 +91,31 @@ public class Plugin
         if (commands == null || commands.Count == 0)
             return;
 
+        var hasMap = commands.Any(c => c is MapMoveCommand);
+        var hasProceed = commands.Any(c => c is ProceedFromRewardsCommand);
+
+        var hasTakeCard = commands.Any(c => c is TakeCardCommand);
+
+        List<ReplayCommand> filtered;
+        if (_voteExecutioner.AwaitingMapMove && hasMap)
+            filtered = commands.Where(c => c is MapMoveCommand).ToList();
+        else if (hasMap && hasProceed)
+            filtered = commands.Where(c => c is not MapMoveCommand).ToList();
+        else
+            filtered = commands.ToList();
+
+        if (hasTakeCard)
+            filtered = filtered.Where(c => c is not ClaimRewardCommand).ToList();
+
+        if (!hasMap)
+            _voteExecutioner.AwaitingMapMove = false;
+
+        if (filtered.Count == 0)
+            return;
+
         CombatOverlay.Refresh();
 
-        var sorted = commands
+        var sorted = filtered
             .OrderBy(c => CommandDescriber.GetSortKey(c))
             .ToList();
         _voteExecutioner.StartVote(sorted);
