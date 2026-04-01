@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Debug;
+using RunReplays;
 
 namespace STS2Twitch;
 
@@ -14,6 +17,8 @@ public class Plugin
 {
     private static TwitchIrcClient? _ircClient;
     private static Timer? _flushTimer;
+    private static bool _signalConnected;
+    private static IReadOnlyList<string>? _lastCommands;
 
     public static void Initialize()
     {
@@ -62,6 +67,52 @@ public class Plugin
         parent.AddChild(_flushTimer);
         GD.Print("[TwitchVoteController] Flush timer created.");
     }
+
+    public static void TryConnectSignal()
+    {
+        if (_signalConnected || _ircClient == null)
+            return;
+
+        var emitter = ReplayDispatcher.Emitter;
+        if (emitter == null || !GodotObject.IsInstanceValid((GodotObject)(object)emitter))
+            return;
+
+        ((GodotObject)emitter).Connect(
+            "InputRequired",
+            Callable.From((Action)OnInputRequired),
+            0u);
+
+        _signalConnected = true;
+        GD.Print("[TwitchVoteController] Connected to RunReplays InputRequired signal.");
+    }
+
+    private static void OnInputRequired()
+    {
+        if (_ircClient == null)
+            return;
+
+        var getDispatchable = typeof(ReplayDispatcher).GetMethod(
+            "GetDispatchableTypes",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        if (getDispatchable == null)
+            return;
+
+        var types = (HashSet<Type>?)getDispatchable.Invoke(null, null);
+        if (types == null || types.Count == 0)
+            return;
+
+        var commands = types.Select(t => t.Name).OrderBy(n => n).ToList();
+
+        if (_lastCommands != null && commands.SequenceEqual(_lastCommands))
+            return;
+
+        _lastCommands = commands;
+
+        var message = "Available commands: " + string.Join(", ", commands);
+        _ircClient.SendMessage(message);
+        DevConsoleLogger.Enqueue($"[TwitchVoteController] Sent to chat: {message}");
+    }
 }
 
 [HarmonyPatch(typeof(NGame), "LoadMainMenu")]
@@ -72,5 +123,6 @@ public class MainMenuPatch
     {
         DevConsoleLogger.FlushToConsole();
         Plugin.SetupFlushTimer(__instance);
+        Plugin.TryConnectSignal();
     }
 }

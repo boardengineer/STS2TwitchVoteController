@@ -36,6 +36,25 @@ public class TwitchIrcClient
         Task.Run(() => RunAsync(_cts.Token));
     }
 
+    public void SendMessage(string message)
+    {
+        var writer = _writer;
+        if (writer == null)
+            return;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await writer.WriteLineAsync($"PRIVMSG #{_channel} :{message}");
+            }
+            catch (Exception ex)
+            {
+                DevConsoleLogger.Enqueue($"[TwitchVoteController] Failed to send message: {ex.Message}");
+            }
+        });
+    }
+
     public void Stop()
     {
         _cts?.Cancel();

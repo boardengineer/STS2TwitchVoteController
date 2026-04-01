@@ -26,6 +26,10 @@
       <HintPath>$(STS2DataDir)\GodotSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="RunReplays">
+      <HintPath>$(STS2GameDir)\mods\RunReplays.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <Target Name="CopyToMods" AfterTargets="Build">

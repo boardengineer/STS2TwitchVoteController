@@ -6,6 +6,6 @@
   "version": "v0.1.0",
   "has_pck": false,
   "has_dll": true,
-  "dependencies": [],
+  "dependencies": ["RunReplays"],
   "affects_gameplay": true
 }
