@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Debug;
 using RunReplays;
+using RunReplays.Commands;
 
 namespace STS2Twitch;
 
@@ -18,7 +19,7 @@ public class Plugin
     private static TwitchIrcClient? _ircClient;
     private static Timer? _flushTimer;
     private static bool _signalConnected;
-    private static IReadOnlyList<string>? _lastCommands;
+    private static List<ReplayCommand>? _availableCommands;
 
     public static void Initialize()
     {
@@ -91,25 +92,19 @@ public class Plugin
         if (_ircClient == null)
             return;
 
-        var getDispatchable = typeof(ReplayDispatcher).GetMethod(
-            "GetDispatchableTypes",
-            BindingFlags.NonPublic | BindingFlags.Static);
-
-        if (getDispatchable == null)
+        var commands = ReplayDispatcher.GetAvailableCommands();
+        if (commands == null || commands.Count == 0)
             return;
 
-        var types = (HashSet<Type>?)getDispatchable.Invoke(null, null);
-        if (types == null || types.Count == 0)
+        var descriptions = commands.Select(c => c.Describe()).OrderBy(d => d).ToList();
+        var lastDescriptions = _availableCommands?.Select(c => c.Describe()).OrderBy(d => d).ToList();
+
+        if (lastDescriptions != null && descriptions.SequenceEqual(lastDescriptions))
             return;
 
-        var commands = types.Select(t => t.Name).OrderBy(n => n).ToList();
+        _availableCommands = commands;
 
-        if (_lastCommands != null && commands.SequenceEqual(_lastCommands))
-            return;
-
-        _lastCommands = commands;
-
-        var message = "Available commands: " + string.Join(", ", commands);
+        var message = "Available commands: " + string.Join(", ", descriptions);
         _ircClient.SendMessage(message);
         DevConsoleLogger.Enqueue($"[TwitchVoteController] Sent to chat: {message}");
     }
