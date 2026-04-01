@@ -13,7 +13,7 @@ public class VoteExecutioner
     private static readonly FieldInfo? ReplayActiveField =
         typeof(ReplayEngine).GetField("_replayActive", BindingFlags.Static | BindingFlags.NonPublic);
 
-    private const double VoteDuration = 5.0;
+    private const double VoteDuration = 20.0;
     private const double SingleOptionDelay = 2.0;
 
     private TwitchIrcClient? _ircClient;
@@ -24,6 +24,9 @@ public class VoteExecutioner
     private readonly Dictionary<string, int> _votes = new();
     private bool _voteActive;
     public bool AwaitingMapMove { get; set; }
+    public bool ShopOpened { get; set; }
+    public enum ChestState { Closed, Opened, RelicTaken }
+    public ChestState TreasureState { get; set; }
 
     public void Initialize(TwitchIrcClient client, Node timerParent)
     {
@@ -165,7 +168,19 @@ public class VoteExecutioner
         if (winner is ProceedFromRewardsCommand)
             AwaitingMapMove = true;
         else if (winner is MapMoveCommand)
+        {
             AwaitingMapMove = false;
+            ShopOpened = false;
+            TreasureState = ChestState.Closed;
+        }
+
+        if (winner is OpenShopCommand or OpenFakeShopCommand)
+            ShopOpened = true;
+
+        if (winner is OpenChestCommand)
+            TreasureState = ChestState.Opened;
+        else if (winner is TakeChestRelicCommand)
+            TreasureState = ChestState.RelicTaken;
 
         PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Executed: {winner} (success={result.Success})");
     }
@@ -185,6 +200,8 @@ public class VoteExecutioner
             _timerLabel.Visible = false;
         CardVoteOverlay.ClearLabels();
         SelectionOverlay.ClearLabels();
+        EventOverlay.ClearLabels();
+        MapOverlay.ClearLabels();
     }
 
     private void UpdateTimerDisplay()
@@ -200,8 +217,27 @@ public class VoteExecutioner
             if (_options.Any(o => o is PlayCardCommand))
                 CardVoteOverlay.Refresh(_options, _votes);
 
-            if (_options.Any(o => o is TakeCardCommand or ClaimRewardCommand or ChooseRestSiteOptionCommand))
+            if (_options.Any(o => o is TakeCardCommand or ClaimRewardCommand or ChooseRestSiteOptionCommand
+                    or SelectCardFromScreenCommand or SelectGridCardCommand))
                 SelectionOverlay.Refresh(_options, _votes);
+
+            if (_options.Any(o => o is ChooseEventOptionCommand))
+                EventOverlay.Refresh(_options, _votes);
+
+            if (_options.Any(o => o is MapMoveCommand))
+            {
+                var screen = MegaCrit.Sts2.Core.Nodes.Screens.Map.NMapScreen.Instance;
+                if (screen != null)
+                {
+                    var tally = new Dictionary<int, int>();
+                    foreach (var choice in _votes.Values)
+                    {
+                        tally.TryGetValue(choice, out var count);
+                        tally[choice] = count + 1;
+                    }
+                    MapOverlay.RefreshWithVotes(screen, _options, tally);
+                }
+            }
         }
     }
 }

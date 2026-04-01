@@ -35,6 +35,8 @@ public static class SelectionOverlay
         TryOverlayCardRewards(options, tally);
         TryOverlayRewardButtons(options, tally);
         TryOverlayRestSite(options, tally);
+        TryOverlayChooseACard(options, tally);
+        TryOverlayGridCards(options, tally);
     }
 
     private static void TryOverlayCardRewards(List<ReplayCommand> options, Dictionary<int, int> tally)
@@ -118,6 +120,50 @@ public static class SelectionOverlay
 
             tally.TryGetValue(i + 1, out var voteCount);
             AddLabel(buttons[restIndex], i + 1, voteCount, new Vector2(-40, -10));
+        }
+    }
+
+    private static void TryOverlayChooseACard(List<ReplayCommand> options, Dictionary<int, int> tally)
+    {
+        var screen = CommandDescriber.GetChooseACardScreen();
+        if (screen == null)
+            return;
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            if (options[i] is not SelectCardFromScreenCommand selectCmd)
+                continue;
+            if (selectCmd.Index < 0)
+                continue;
+
+            var holder = CommandDescriber.FindCardHolderByIndex(screen, selectCmd.Index);
+            if (holder is not Control control)
+                continue;
+
+            tally.TryGetValue(i + 1, out var voteCount);
+            AddLabel(control, i + 1, voteCount, new Vector2(-40, -45));
+        }
+    }
+
+    private static void TryOverlayGridCards(List<ReplayCommand> options, Dictionary<int, int> tally)
+    {
+        var screen = CommandDescriber.GetCardGridScreen();
+        if (screen == null)
+            return;
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            if (options[i] is not SelectGridCardCommand gridCmd)
+                continue;
+            if (gridCmd.Indices.Length == 0)
+                continue;
+
+            var holder = CommandDescriber.FindCardHolderByIndex(screen, gridCmd.Indices[0]);
+            if (holder is not Control control)
+                continue;
+
+            tally.TryGetValue(i + 1, out var voteCount);
+            AddLabel(control, i + 1, voteCount, new Vector2(-40, -45));
         }
     }
 
