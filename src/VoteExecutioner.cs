@@ -184,6 +184,7 @@ public class VoteExecutioner
         if (_timerLabel != null)
             _timerLabel.Visible = false;
         CardVoteOverlay.ClearLabels();
+        SelectionOverlay.ClearLabels();
     }
 
     private void UpdateTimerDisplay()
@@ -194,7 +195,13 @@ public class VoteExecutioner
         var remaining = Math.Ceiling(_voteTimer.TimeLeft);
         _timerLabel.Text = $"Vote: {remaining:0}s";
 
-        if (_voteActive && _options.Any(o => o is PlayCardCommand))
-            CardVoteOverlay.Refresh(_options, _votes);
+        if (_voteActive)
+        {
+            if (_options.Any(o => o is PlayCardCommand))
+                CardVoteOverlay.Refresh(_options, _votes);
+
+            if (_options.Any(o => o is TakeCardCommand or ClaimRewardCommand or ChooseRestSiteOptionCommand))
+                SelectionOverlay.Refresh(_options, _votes);
+        }
     }
 }

@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using RunReplays;
 using RunReplays.Commands;
 
@@ -21,6 +22,15 @@ public static class CommandDescriber
                 : 0;
             return (0, handIndex * 1000 + targetIndex, Describe(command));
         }
+
+        if (command is TakeCardCommand takeCmd)
+        {
+            var order = takeCmd.IsSkip ? 998 : takeCmd.IsSacrifice ? 999 : takeCmd.CardIndex;
+            return (0, order, Describe(command));
+        }
+
+        if (command is ClaimRewardCommand claimCmd)
+            return (0, claimCmd.RewardIndex, Describe(command));
 
         return (1, 0, Describe(command));
     }
@@ -58,6 +68,12 @@ public static class CommandDescriber
         if (command is PlayCardCommand cardCmd)
             return DescribePlayCard(cardCmd);
 
+        if (command is TakeCardCommand takeCmd)
+            return DescribeTakeCard(takeCmd);
+
+        if (command is ChooseRestSiteOptionCommand restCmd)
+            return DescribeRestSite(restCmd);
+
         return command.Describe();
     }
 
@@ -82,6 +98,52 @@ public static class CommandDescriber
                 ? $"{creature.Name} #{enemyIndex}"
                 : creature.Name;
             return $"Play {name} on {targetLabel}";
+        }
+        catch (Exception)
+        {
+            return cmd.Describe();
+        }
+    }
+
+    private static string DescribeTakeCard(TakeCardCommand cmd)
+    {
+        if (cmd.IsSkip) return "Skip";
+        if (cmd.IsSacrifice) return "Sacrifice";
+
+        try
+        {
+            var screen = ReplayState.CardRewardSelectionScreen;
+            if (screen == null) return cmd.Describe();
+
+            var cardRowField = typeof(NCardRewardSelectionScreen).GetField(
+                "_cardRow", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var cardRow = cardRowField?.GetValue(screen) as Godot.Control;
+            if (cardRow == null) return cmd.Describe();
+
+            var holders = cardRow.GetChildren()
+                .OfType<MegaCrit.Sts2.Core.Nodes.Cards.Holders.NGridCardHolder>().ToList();
+            if (cmd.CardIndex < 0 || cmd.CardIndex >= holders.Count)
+                return cmd.Describe();
+
+            var card = holders[cmd.CardIndex].CardModel;
+            return card != null ? $"Take {card.Title}" : cmd.Describe();
+        }
+        catch (Exception)
+        {
+            return cmd.Describe();
+        }
+    }
+
+    private static string DescribeRestSite(ChooseRestSiteOptionCommand cmd)
+    {
+        try
+        {
+            var sync = ReplayState.ActiveRestSiteSynchronizer;
+            if (sync == null) return cmd.Describe();
+
+            var options = sync.GetLocalOptions();
+            var option = options.FirstOrDefault(o => o.OptionId == cmd.OptionId);
+            return option != null ? option.Title.GetFormattedText() : cmd.Describe();
         }
         catch (Exception)
         {
