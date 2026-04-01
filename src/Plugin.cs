@@ -96,8 +96,8 @@ public class Plugin
         if (commands == null || commands.Count == 0)
             return;
 
-        var descriptions = commands.Select(c => c.Describe()).OrderBy(d => d).ToList();
-        var lastDescriptions = _availableCommands?.Select(c => c.Describe()).OrderBy(d => d).ToList();
+        var descriptions = commands.Select(c => CommandDescriber.Describe(c)).OrderBy(d => d).ToList();
+        var lastDescriptions = _availableCommands?.Select(c => CommandDescriber.Describe(c)).OrderBy(d => d).ToList();
 
         if (lastDescriptions != null && descriptions.SequenceEqual(lastDescriptions))
             return;
