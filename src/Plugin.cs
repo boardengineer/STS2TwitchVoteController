@@ -148,9 +148,9 @@ public class Plugin
         if (_voteExecutioner.TreasureState == VoteExecutioner.ChestState.RelicTaken)
             filtered = filtered.Where(c => c is not OpenChestCommand and not TakeChestRelicCommand).ToList();
         else if (_voteExecutioner.TreasureState == VoteExecutioner.ChestState.Opened)
-            filtered = filtered.Where(c => c is not OpenChestCommand).ToList();
+            filtered = filtered.Where(c => c is not OpenChestCommand and not ProceedToMapCommand).ToList();
         else if (hasOpenChest && hasTakeRelic)
-            filtered = filtered.Where(c => c is not TakeChestRelicCommand).ToList();
+            filtered = filtered.Where(c => c is not TakeChestRelicCommand and not ProceedToMapCommand).ToList();
 
         if (!hasOpenChest && !hasTakeRelic)
             _voteExecutioner.TreasureState = VoteExecutioner.ChestState.Closed;
