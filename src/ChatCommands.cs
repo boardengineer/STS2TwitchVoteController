@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 
 namespace STS2Twitch;
@@ -33,16 +34,26 @@ public static class ChatCommands
 
     private static string LookupCard(string query)
     {
+        var wantUpgrade = query.EndsWith("+");
+        var baseName = wantUpgrade ? query[..^1].Trim() : query;
+
         var match = ModelDb.AllCards
-            .FirstOrDefault(c => c.Title.Equals(query, StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault(c => c.Title.Equals(baseName, StringComparison.OrdinalIgnoreCase))
             ?? ModelDb.AllCards
-                .FirstOrDefault(c => c.Title.Contains(query, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(c => c.Title.Contains(baseName, StringComparison.OrdinalIgnoreCase));
 
         if (match == null)
-            return $"Card '{query}' not found.";
+            return $"Card '{baseName}' not found.";
 
-        var desc = match.Description.GetFormattedText();
-        return $"{match.Title}: {StripBBCode(desc)}";
+        var mutable = match.ToMutable();
+        if (wantUpgrade)
+        {
+            mutable.UpgradeInternal();
+            mutable.FinalizeUpgradeInternal();
+        }
+
+        var desc = mutable.GetDescriptionForPile(PileType.None);
+        return $"{mutable.Title}: {StripBBCode(desc)}";
     }
 
     private static string LookupRelic(string query)
@@ -55,8 +66,9 @@ public static class ChatCommands
         if (match == null)
             return $"Relic '{query}' not found.";
 
-        var title = match.Title.GetFormattedText();
-        var desc = match.Description.GetFormattedText();
+        var mutable = match.ToMutable();
+        var title = mutable.Title.GetFormattedText();
+        var desc = mutable.DynamicDescription.GetFormattedText();
         return $"{StripBBCode(title)}: {StripBBCode(desc)}";
     }
 
@@ -70,8 +82,9 @@ public static class ChatCommands
         if (match == null)
             return $"Potion '{query}' not found.";
 
-        var title = match.Title.GetFormattedText();
-        var desc = match.Description.GetFormattedText();
+        var mutable = match.ToMutable();
+        var title = mutable.Title.GetFormattedText();
+        var desc = mutable.DynamicDescription.GetFormattedText();
         return $"{StripBBCode(title)}: {StripBBCode(desc)}";
     }
 
