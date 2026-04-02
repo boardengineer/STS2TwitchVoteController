@@ -165,7 +165,7 @@ public class VoteExecutioner
         var result = winner.Execute();
         ReplayDispatcher.ClearDispatchableCache();
 
-        if (winner is ProceedFromRewardsCommand)
+        if (winner is ProceedToMapCommand)
             AwaitingMapMove = true;
         else if (winner is MapMoveCommand)
         {
@@ -202,6 +202,7 @@ public class VoteExecutioner
         SelectionOverlay.ClearLabels();
         EventOverlay.ClearLabels();
         MapOverlay.ClearLabels();
+        ShopOverlay.ClearLabels();
     }
 
     private void UpdateTimerDisplay()
@@ -223,6 +224,10 @@ public class VoteExecutioner
 
             if (_options.Any(o => o is ChooseEventOptionCommand))
                 EventOverlay.Refresh(_options, _votes);
+
+            if (_options.Any(o => o is BuyCardCommand or BuyRelicCommand
+                    or BuyPotionCommand or BuyCardRemovalCommand))
+                ShopOverlay.Refresh(_options, _votes);
 
             if (_options.Any(o => o is MapMoveCommand))
             {

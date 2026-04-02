@@ -44,6 +44,9 @@ public static class CommandDescriber
         if (command is SelectGridCardCommand gridCmd)
             return (0, gridCmd.Indices.Length > 0 ? gridCmd.Indices[0] : 999, Describe(command));
 
+        if (command is UsePotionCommand or DiscardPotionCommand)
+            return (2, 0, Describe(command));
+
         return (1, 0, Describe(command));
     }
 

@@ -52,6 +52,14 @@ public class Plugin
         _ircClient.OnMessageReceived += (username, message) =>
         {
             PlayerActionBuffer.LogMigrationWarning($"[Chat] {username}: {message}");
+
+            var cmdResponse = ChatCommands.TryHandle(message);
+            if (cmdResponse != null)
+            {
+                _ircClient.SendMessage(cmdResponse);
+                return;
+            }
+
             _voteExecutioner.OnChatMessage(username, message);
         };
         _ircClient.Start();
@@ -93,7 +101,7 @@ public class Plugin
             return;
 
         var hasMap = commands.Any(c => c is MapMoveCommand);
-        var hasProceed = commands.Any(c => c is ProceedFromRewardsCommand);
+        var hasProceed = commands.Any(c => c is ProceedToMapCommand);
 
         var hasTakeCard = commands.Any(c => c is TakeCardCommand);
 
