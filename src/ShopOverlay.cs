@@ -21,16 +21,38 @@ public static class ShopOverlay
         if (room == null || !GodotObject.IsInstanceValid(room))
             return;
 
-        var inventory = room.Inventory;
-        if (inventory == null)
-            return;
-
         var tally = new Dictionary<int, int>();
         foreach (var choice in votes.Values)
         {
             tally.TryGetValue(choice, out var count);
             tally[choice] = count + 1;
         }
+
+        // Overlay on room-level buttons (open shop, proceed, close shop)
+        var backButton = room.Inventory?.GetNodeOrNull<Control>("%BackButton");
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            Control? target = null;
+
+            if (options[i] is OpenShopCommand or OpenFakeShopCommand)
+                target = room.MerchantButton;
+            else if (options[i] is ProceedToMapCommand)
+                target = room.ProceedButton;
+            else if (options[i] is CloseShopCommand)
+                target = backButton;
+
+            if (target != null && GodotObject.IsInstanceValid(target))
+            {
+                tally.TryGetValue(i + 1, out var voteCount);
+                AddLabel(target, i + 1, voteCount, new Vector2(target.Size.X / 2 - 40, -10));
+            }
+        }
+
+        // Buy state: overlay on shop slots
+        var inventory = room.Inventory;
+        if (inventory == null)
+            return;
 
         var slots = inventory.GetAllSlots().ToList();
 
@@ -66,21 +88,25 @@ public static class ShopOverlay
             if (matchedSlot == null || !GodotObject.IsInstanceValid(matchedSlot))
                 continue;
 
-            tally.TryGetValue(i + 1, out var voteCount);
-
-            var label = new Label();
-            label.Text = voteCount > 0 ? $"[{i + 1}]:{voteCount}" : $"[{i + 1}]";
-            label.AddThemeColorOverride("font_color", Colors.Yellow);
-            label.AddThemeFontSizeOverride("font_size", 28);
-            label.AddThemeColorOverride("font_outline_color", Colors.Black);
-            label.AddThemeConstantOverride("outline_size", 6);
-            label.HorizontalAlignment = HorizontalAlignment.Center;
-            label.Size = new Vector2(80, 40);
-            label.Position = new Vector2(-40 + matchedSlot.Size.X / 2, -10);
-            label.ZIndex = 100;
-            matchedSlot.AddChild(label);
-            _labels.Add(label);
+            tally.TryGetValue(i + 1, out var vc);
+            AddLabel(matchedSlot, i + 1, vc, new Vector2(matchedSlot.Size.X / 2 - 40, -10));
         }
+    }
+
+    private static void AddLabel(Control parent, int optionNumber, int voteCount, Vector2 offset)
+    {
+        var label = new Label();
+        label.Text = voteCount > 0 ? $"[{optionNumber}]:{voteCount}" : $"[{optionNumber}]";
+        label.AddThemeColorOverride("font_color", Colors.Yellow);
+        label.AddThemeFontSizeOverride("font_size", 28);
+        label.AddThemeColorOverride("font_outline_color", Colors.Black);
+        label.AddThemeConstantOverride("outline_size", 6);
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.Size = new Vector2(80, 40);
+        label.Position = offset;
+        label.ZIndex = 100;
+        parent.AddChild(label);
+        _labels.Add(label);
     }
 
     public static void ClearLabels()

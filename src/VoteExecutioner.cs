@@ -14,7 +14,7 @@ public class VoteExecutioner
         typeof(ReplayEngine).GetField("_replayActive", BindingFlags.Static | BindingFlags.NonPublic);
 
     private const double VoteDuration = 20.0;
-    private const double SingleOptionDelay = 2.0;
+    private const double SingleOptionDelay = 5.0;
 
     private TwitchIrcClient? _ircClient;
     private Timer? _voteTimer;
@@ -69,10 +69,13 @@ public class VoteExecutioner
         if (_ircClient == null || _voteTimer == null || commands.Count == 0)
             return;
 
-        if (commands.Count == 1)
+        var nonDiscardOptions = commands.Where(c => c is not DiscardPotionCommand).ToList();
+        if (nonDiscardOptions.Count <= 1)
         {
-            var desc = CommandDescriber.Describe(commands[0]);
-            var message = $"Only option: {desc}. Executing in 2s...";
+            var autoCmd = nonDiscardOptions.Count == 1 ? nonDiscardOptions[0] : commands[0];
+            var desc = CommandDescriber.Describe(autoCmd);
+            _options = new List<ReplayCommand> { autoCmd };
+            var message = $"Only option: {desc}. Executing in {SingleOptionDelay:0}s...";
             _ircClient.SendMessage(message);
             PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] {message}");
             _voteTimer.WaitTime = SingleOptionDelay;
@@ -232,7 +235,9 @@ public class VoteExecutioner
                 EventOverlay.Refresh(_options, _votes);
 
             if (_options.Any(o => o is BuyCardCommand or BuyRelicCommand
-                    or BuyPotionCommand or BuyCardRemovalCommand))
+                    or BuyPotionCommand or BuyCardRemovalCommand
+                    or OpenShopCommand or OpenFakeShopCommand or CloseShopCommand)
+                || (_options.Any(o => o is ProceedToMapCommand) && ReplayState.ActiveMerchantRoom != null))
                 ShopOverlay.Refresh(_options, _votes);
 
             if (_options.Any(o => o is MapMoveCommand))
