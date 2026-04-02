@@ -6,8 +6,13 @@ using Godot;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
+using MegaCrit.Sts2.Core.Runs;
 using RunReplays;
 using RunReplays.Commands;
 
@@ -83,6 +88,9 @@ public static class CommandDescriber
 
     public static string Describe(ReplayCommand command)
     {
+        if (command is MapMoveCommand mapCmd)
+            return DescribeMapMove(mapCmd);
+
         if (command is ChooseEventOptionCommand eventCmd)
             return DescribeEventOption(eventCmd);
 
@@ -106,6 +114,12 @@ public static class CommandDescriber
 
         if (command is ClaimRewardCommand claimCmd)
             return DescribeClaimReward(claimCmd);
+
+        if (command is UsePotionCommand usePotCmd)
+            return DescribeUsePotion(usePotCmd);
+
+        if (command is DiscardPotionCommand discardPotCmd)
+            return DescribeDiscardPotion(discardPotCmd);
 
         if (command is ChooseRestSiteOptionCommand restCmd)
             return DescribeRestSite(restCmd);
@@ -339,6 +353,71 @@ public static class CommandDescriber
         }
     }
 
+    private static Player? GetLocalPlayer()
+    {
+        try
+        {
+            var combatState = CombatManager.Instance?.DebugOnlyGetState();
+            if (combatState != null)
+                return combatState.Players.FirstOrDefault();
+        }
+        catch { }
+
+        try
+        {
+            var runState = RunStateProp?.GetValue(RunManager.Instance) as IRunState;
+            return runState?.Players.FirstOrDefault();
+        }
+        catch { }
+
+        return null;
+    }
+
+    private static string DescribeUsePotion(UsePotionCommand cmd)
+    {
+        try
+        {
+            var player = GetLocalPlayer();
+            var potion = player?.GetPotionAtSlotIndex((int)cmd.PotionIndex);
+            if (potion == null) return cmd.Describe();
+
+            var name = potion.Title.GetFormattedText();
+
+            if (cmd.TargetId == null)
+                return $"Use {name}";
+
+            var enemyIndex = CombatOverlay.GetEnemyIndex(cmd.TargetId);
+            var creature = CombatManager.Instance?.DebugOnlyGetState()?.GetCreature(cmd.TargetId);
+            if (creature == null)
+                return $"Use {name}";
+
+            var targetLabel = enemyIndex != null
+                ? $"{creature.Name} #{enemyIndex}"
+                : creature.Name;
+            return $"Use {name} on {targetLabel}";
+        }
+        catch (Exception)
+        {
+            return cmd.Describe();
+        }
+    }
+
+    private static string DescribeDiscardPotion(DiscardPotionCommand cmd)
+    {
+        try
+        {
+            var player = GetLocalPlayer();
+            var potion = player?.GetPotionAtSlotIndex(cmd.SlotIndex);
+            if (potion == null) return cmd.Describe();
+
+            return $"Discard {potion.Title.GetFormattedText()}";
+        }
+        catch (Exception)
+        {
+            return cmd.Describe();
+        }
+    }
+
     private static string DescribeRestSite(ChooseRestSiteOptionCommand cmd)
     {
         try
@@ -349,6 +428,40 @@ public static class CommandDescriber
             var options = sync.GetLocalOptions();
             var option = options.FirstOrDefault(o => o.OptionId == cmd.OptionId);
             return option != null ? option.Title.GetFormattedText() : cmd.Describe();
+        }
+        catch (Exception)
+        {
+            return cmd.Describe();
+        }
+    }
+
+    private static readonly FieldInfo? MapPointDictField =
+        typeof(NMapScreen).GetField("_mapPointDictionary", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    private static readonly PropertyInfo? RunStateProp =
+        typeof(RunManager).GetProperty("State", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+    private static string DescribeMapMove(MapMoveCommand cmd)
+    {
+        try
+        {
+            var screen = NMapScreen.Instance;
+            if (screen == null) return cmd.Describe();
+
+            if (MapPointDictField?.GetValue(screen) is not Dictionary<MapCoord, NMapPoint> dict)
+                return cmd.Describe();
+
+            var runState = RunStateProp?.GetValue(RunManager.Instance) as IRunState;
+            var currentCoord = runState?.CurrentMapCoord;
+            int row = currentCoord.HasValue ? currentCoord.Value.row + 1 : 0;
+
+            var key = new MapCoord(cmd.Col, row);
+            if (!dict.TryGetValue(key, out var mapPoint))
+                return cmd.Describe();
+
+            var pointType = mapPoint.Point.PointType;
+            var coord = mapPoint.Point.coord;
+            return $"Move to {pointType} at ({coord.col}, {coord.row})";
         }
         catch (Exception)
         {
