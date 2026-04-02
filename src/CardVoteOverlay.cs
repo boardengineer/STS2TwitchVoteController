@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using RunReplays.Commands;
 
 namespace STS2Twitch;
@@ -95,6 +96,32 @@ public static class CardVoteOverlay
             label.ZIndex = 100;
             holder.AddChild(label);
             _labels.Add(label);
+        }
+
+        // End turn button overlay
+        var endTurnButton = NCombatRoom.Instance?.Ui?.EndTurnButton;
+        if (endTurnButton != null && GodotObject.IsInstanceValid(endTurnButton))
+        {
+            for (int i = 0; i < options.Count; i++)
+            {
+                if (options[i] is not EndTurnCommand)
+                    continue;
+
+                tally.TryGetValue(i + 1, out var etVotes);
+                var etLabel = new Label();
+                etLabel.Text = etVotes > 0 ? $"[{i + 1}]:{etVotes}" : $"[{i + 1}]";
+                etLabel.AddThemeColorOverride("font_color", Colors.Yellow);
+                etLabel.AddThemeFontSizeOverride("font_size", 28);
+                etLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+                etLabel.AddThemeConstantOverride("outline_size", 6);
+                etLabel.HorizontalAlignment = HorizontalAlignment.Center;
+                etLabel.Size = new Vector2(80, 40);
+                etLabel.Position = new Vector2(endTurnButton.Size.X / 2 - 40, -10);
+                etLabel.ZIndex = 100;
+                endTurnButton.AddChild(etLabel);
+                _labels.Add(etLabel);
+                break;
+            }
         }
     }
 

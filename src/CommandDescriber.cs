@@ -44,6 +44,9 @@ public static class CommandDescriber
         if (command is SelectGridCardCommand gridCmd)
             return (0, gridCmd.Indices.Length > 0 ? gridCmd.Indices[0] : 999, Describe(command));
 
+        if (command is ClickGridCardCommand clickGridCmd)
+            return (0, clickGridCmd.Index, Describe(command));
+
         if (command is SelectHandCardsCommand handCmd)
             return (0, handCmd.HandIndices.Length > 0 ? handCmd.HandIndices[0] : 999, Describe(command));
 
@@ -94,6 +97,9 @@ public static class CommandDescriber
 
         if (command is SelectGridCardCommand gridCmd)
             return DescribeGridCard(gridCmd);
+
+        if (command is ClickGridCardCommand clickGridCmd)
+            return DescribeClickGridCard(clickGridCmd);
 
         if (command is SelectHandCardsCommand handCmd)
             return DescribeSelectHandCards(handCmd);
@@ -215,6 +221,27 @@ public static class CommandDescriber
             }
 
             return names.Count > 0 ? $"Select {string.Join(", ", names)}" : cmd.Describe();
+        }
+        catch (Exception)
+        {
+            return cmd.Describe();
+        }
+    }
+
+    private static string DescribeClickGridCard(ClickGridCardCommand cmd)
+    {
+        try
+        {
+            var screen = CardGridActiveScreenField?.GetValue(null) as NCardGridSelectionScreen;
+            if (screen == null) return cmd.Describe();
+
+            var cards = CardGridCardsField?.GetValue(screen) as IReadOnlyList<CardModel>;
+            if (cards == null) return cmd.Describe();
+
+            if (cmd.Index >= 0 && cmd.Index < cards.Count)
+                return $"Select {cards[cmd.Index].Title}";
+
+            return cmd.Describe();
         }
         catch (Exception)
         {

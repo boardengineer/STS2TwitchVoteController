@@ -37,6 +37,7 @@ public static class SelectionOverlay
         TryOverlayRestSite(options, tally);
         TryOverlayChooseACard(options, tally);
         TryOverlayGridCards(options, tally);
+        TryOverlayGridConfirmCancel(options, tally);
     }
 
     private static void TryOverlayCardRewards(List<ReplayCommand> options, Dictionary<int, int> tally)
@@ -153,17 +154,70 @@ public static class SelectionOverlay
 
         for (int i = 0; i < options.Count; i++)
         {
-            if (options[i] is not SelectGridCardCommand gridCmd)
-                continue;
-            if (gridCmd.Indices.Length == 0)
+            int? cardIndex = null;
+
+            if (options[i] is SelectGridCardCommand gridCmd && gridCmd.Indices.Length > 0)
+                cardIndex = gridCmd.Indices[0];
+            else if (options[i] is ClickGridCardCommand clickCmd)
+                cardIndex = clickCmd.Index;
+
+            if (cardIndex == null)
                 continue;
 
-            var holder = CommandDescriber.FindCardHolderByIndex(screen, gridCmd.Indices[0]);
+            var holder = CommandDescriber.FindCardHolderByIndex(screen, cardIndex.Value);
             if (holder is not Control control)
                 continue;
 
             tally.TryGetValue(i + 1, out var voteCount);
             AddLabel(control, i + 1, voteCount, new Vector2(-40, -45));
+        }
+    }
+
+    private static void TryOverlayGridConfirmCancel(List<ReplayCommand> options, Dictionary<int, int> tally)
+    {
+        var screen = CommandDescriber.GetCardGridScreen();
+        if (screen == null)
+            return;
+
+        var hasConfirm = options.Any(o => o is ConfirmGridSelectionCommand);
+        var hasCancel = options.Any(o => o is CancelGridSelectionCommand);
+        if (!hasConfirm && !hasCancel)
+            return;
+
+        // Find confirm and cancel buttons on the screen
+        Control? confirmButton = null;
+        Control? cancelButton = null;
+
+        foreach (var node in screen.FindChildren("*", "", true, false))
+        {
+            if (node is not Control ctrl)
+                continue;
+
+            var typeName = node.GetType().Name;
+            var isEnabledProp = ctrl.GetType().GetProperty("IsEnabled",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+            var isEnabled = isEnabledProp != null && (bool)(isEnabledProp.GetValue(ctrl) ?? false);
+
+            if (typeName == "NConfirmButton" && isEnabled && confirmButton == null)
+                confirmButton = ctrl;
+            else if (typeName == "NBackButton" && isEnabled && cancelButton == null)
+                cancelButton = ctrl;
+        }
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            Control? target = null;
+
+            if (options[i] is ConfirmGridSelectionCommand && confirmButton != null)
+                target = confirmButton;
+            else if (options[i] is CancelGridSelectionCommand && cancelButton != null)
+                target = cancelButton;
+
+            if (target == null)
+                continue;
+
+            tally.TryGetValue(i + 1, out var voteCount);
+            AddLabel(target, i + 1, voteCount, new Vector2(target.Size.X / 2 - 40, -10));
         }
     }
 

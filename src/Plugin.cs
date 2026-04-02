@@ -127,6 +127,12 @@ public class Plugin
         if (hasTakeCard)
             filtered = filtered.Where(c => c is not ClaimRewardCommand).ToList();
 
+        if (filtered.Any(c => c is ClickGridCardCommand))
+            filtered = filtered.Where(c => c is not SelectGridCardCommand and not ChooseRestSiteOptionCommand).ToList();
+
+        if (filtered.Any(c => c is CancelGridSelectionCommand) && filtered.Any(c => c is ConfirmGridSelectionCommand))
+            filtered = filtered.Where(c => c is CancelGridSelectionCommand or ConfirmGridSelectionCommand).ToList();
+
         // Shop state machine
         var hasOpenShop = filtered.Any(c => c is OpenShopCommand or OpenFakeShopCommand);
         var hasBuy = filtered.Any(c => c is BuyCardCommand or BuyRelicCommand

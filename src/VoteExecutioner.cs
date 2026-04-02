@@ -13,7 +13,7 @@ public class VoteExecutioner
     private static readonly FieldInfo? ReplayActiveField =
         typeof(ReplayEngine).GetField("_replayActive", BindingFlags.Static | BindingFlags.NonPublic);
 
-    private const double VoteDuration = 20.0;
+    private const double VoteDuration = 10.0;
     private const double SingleOptionDelay = 5.0;
 
     private TwitchIrcClient? _ircClient;
@@ -224,11 +224,12 @@ public class VoteExecutioner
 
         if (_voteActive)
         {
-            if (_options.Any(o => o is PlayCardCommand or SelectHandCardsCommand))
+            if (_options.Any(o => o is PlayCardCommand or SelectHandCardsCommand or EndTurnCommand))
                 CardVoteOverlay.Refresh(_options, _votes);
 
             if (_options.Any(o => o is TakeCardCommand or ClaimRewardCommand or ChooseRestSiteOptionCommand
-                    or SelectCardFromScreenCommand or SelectGridCardCommand))
+                    or SelectCardFromScreenCommand or SelectGridCardCommand or ClickGridCardCommand
+                    or ConfirmGridSelectionCommand or CancelGridSelectionCommand))
                 SelectionOverlay.Refresh(_options, _votes);
 
             if (_options.Any(o => o is ChooseEventOptionCommand))
