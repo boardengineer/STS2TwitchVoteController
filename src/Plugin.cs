@@ -100,6 +100,17 @@ public class Plugin
         if (commands == null || commands.Count == 0)
             return;
 
+        if (_voteExecutioner.AwaitingProceedAfterShop)
+        {
+            _voteExecutioner.AwaitingProceedAfterShop = false;
+            var proceedCmd = commands.FirstOrDefault(c => c is ProceedToMapCommand);
+            if (proceedCmd != null)
+            {
+                _voteExecutioner.StartVote(new List<ReplayCommand> { proceedCmd });
+                return;
+            }
+        }
+
         var hasMap = commands.Any(c => c is MapMoveCommand);
         var hasProceed = commands.Any(c => c is ProceedToMapCommand);
 
@@ -122,7 +133,7 @@ public class Plugin
             or BuyPotionCommand or BuyCardRemovalCommand);
 
         if (_voteExecutioner.ShopOpened)
-            filtered = filtered.Where(c => c is not OpenShopCommand and not OpenFakeShopCommand).ToList();
+            filtered = filtered.Where(c => c is not OpenShopCommand and not OpenFakeShopCommand and not ProceedToMapCommand).ToList();
         else if (hasOpenShop && hasBuy)
             filtered = filtered.Where(c => c is not BuyCardCommand and not BuyRelicCommand
                 and not BuyPotionCommand and not BuyCardRemovalCommand and not MapMoveCommand).ToList();

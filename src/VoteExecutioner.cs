@@ -25,6 +25,7 @@ public class VoteExecutioner
     private bool _voteActive;
     public bool AwaitingMapMove { get; set; }
     public bool ShopOpened { get; set; }
+    public bool AwaitingProceedAfterShop { get; set; }
     public enum ChestState { Closed, Opened, RelicTaken }
     public ChestState TreasureState { get; set; }
 
@@ -176,6 +177,11 @@ public class VoteExecutioner
 
         if (winner is OpenShopCommand or OpenFakeShopCommand)
             ShopOpened = true;
+        else if (winner is CloseShopCommand)
+        {
+            ShopOpened = false;
+            AwaitingProceedAfterShop = true;
+        }
 
         if (winner is OpenChestCommand)
             TreasureState = ChestState.Opened;
