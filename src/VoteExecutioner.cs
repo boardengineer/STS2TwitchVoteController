@@ -224,7 +224,7 @@ public class VoteExecutioner
 
         if (_voteActive)
         {
-            if (_options.Any(o => o is PlayCardCommand))
+            if (_options.Any(o => o is PlayCardCommand or SelectHandCardsCommand))
                 CardVoteOverlay.Refresh(_options, _votes);
 
             if (_options.Any(o => o is TakeCardCommand or ClaimRewardCommand or ChooseRestSiteOptionCommand

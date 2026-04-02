@@ -44,6 +44,9 @@ public static class CommandDescriber
         if (command is SelectGridCardCommand gridCmd)
             return (0, gridCmd.Indices.Length > 0 ? gridCmd.Indices[0] : 999, Describe(command));
 
+        if (command is SelectHandCardsCommand handCmd)
+            return (0, handCmd.HandIndices.Length > 0 ? handCmd.HandIndices[0] : 999, Describe(command));
+
         if (command is UsePotionCommand or DiscardPotionCommand)
             return (2, 0, Describe(command));
 
@@ -91,6 +94,9 @@ public static class CommandDescriber
 
         if (command is SelectGridCardCommand gridCmd)
             return DescribeGridCard(gridCmd);
+
+        if (command is SelectHandCardsCommand handCmd)
+            return DescribeSelectHandCards(handCmd);
 
         if (command is ClaimRewardCommand claimCmd)
             return DescribeClaimReward(claimCmd);
@@ -238,6 +244,35 @@ public static class CommandDescriber
             }
         }
         return null;
+    }
+
+    private static string DescribeSelectHandCards(SelectHandCardsCommand cmd)
+    {
+        if (cmd.HandIndices.Length == 0)
+            return "Select none";
+
+        try
+        {
+            var state = CombatManager.Instance.DebugOnlyGetState();
+            if (state == null) return cmd.Describe();
+
+            var player = state.Players.FirstOrDefault();
+            var hand = player?.PlayerCombatState?.Hand.Cards;
+            if (hand == null) return cmd.Describe();
+
+            var names = new List<string>();
+            foreach (var idx in cmd.HandIndices)
+            {
+                if (idx >= 0 && idx < hand.Count)
+                    names.Add(hand[idx].Title);
+            }
+
+            return names.Count > 0 ? $"Select {string.Join(", ", names)}" : cmd.Describe();
+        }
+        catch (Exception)
+        {
+            return cmd.Describe();
+        }
     }
 
     private static string DescribeClaimReward(ClaimRewardCommand cmd)

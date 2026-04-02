@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
@@ -45,6 +46,32 @@ public static class CardVoteOverlay
 
             tally.TryGetValue(i + 1, out var voteCount);
             cardOptions[card].Add((i + 1, voteCount));
+        }
+
+        // Also handle SelectHandCardsCommand — map hand indices to cards
+        var handCards = CombatManager.Instance.DebugOnlyGetState()
+            ?.Players.FirstOrDefault()?.PlayerCombatState?.Hand.Cards;
+
+        if (handCards != null)
+        {
+            for (int i = 0; i < options.Count; i++)
+            {
+                if (options[i] is not SelectHandCardsCommand handCmd)
+                    continue;
+
+                foreach (var idx in handCmd.HandIndices)
+                {
+                    if (idx >= 0 && idx < handCards.Count)
+                    {
+                        var card = handCards[idx];
+                        if (!cardOptions.ContainsKey(card))
+                            cardOptions[card] = new();
+
+                        tally.TryGetValue(i + 1, out var vc);
+                        cardOptions[card].Add((i + 1, vc));
+                    }
+                }
+            }
         }
 
         foreach (var holder in hand.ActiveHolders)
