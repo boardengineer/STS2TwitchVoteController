@@ -92,7 +92,11 @@ public class Plugin
     private static void OnInputRequired()
     {
         PlayerActionBuffer.LogMigrationWarning("[TwitchVoteController] InputRequired signal received.");
+        StartOrRestartVote();
+    }
 
+    public static void StartOrRestartVote()
+    {
         if (_voteExecutioner == null)
             return;
 
