@@ -7,7 +7,7 @@ using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using RunReplays.Commands;
 
-namespace STS2Twitch;
+namespace STS2Twitch.Overlays;
 
 public static class MapOverlay
 {

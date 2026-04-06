@@ -9,7 +9,7 @@ using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using RunReplays;
 using RunReplays.Commands;
 
-namespace STS2Twitch;
+namespace STS2Twitch.Overlays;
 
 public static class SelectionOverlay
 {

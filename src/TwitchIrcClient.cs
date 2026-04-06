@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Godot;
 using RunReplays;
 
 namespace STS2Twitch;
@@ -70,7 +71,7 @@ public class TwitchIrcClient
         {
             try
             {
-                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Connecting to Twitch IRC (#{_channel})...");
+                GD.Print($"[TwitchVoteController] Connecting to Twitch IRC (#{_channel})...");
 
                 _client = new TcpClient();
                 await _client.ConnectAsync(TwitchIrcHost, TwitchIrcPort, ct);
@@ -84,7 +85,7 @@ public class TwitchIrcClient
                 await _writer.WriteLineAsync($"JOIN #{_channel}");
 
                 reconnectDelay = 5;
-                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Connected to #{_channel}!");
+                GD.Print($"[TwitchVoteController] Connected to #{_channel}!");
 
                 await ReadLoopAsync(ct);
             }

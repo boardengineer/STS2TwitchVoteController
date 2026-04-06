@@ -5,7 +5,7 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 
-namespace STS2Twitch;
+namespace STS2Twitch.Overlays;
 
 public static class CombatOverlay
 {

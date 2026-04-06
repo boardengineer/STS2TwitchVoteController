@@ -5,6 +5,7 @@ using System.Reflection;
 using Godot;
 using RunReplays;
 using RunReplays.Commands;
+using STS2Twitch.Overlays;
 
 namespace STS2Twitch;
 

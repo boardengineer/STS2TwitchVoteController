@@ -11,7 +11,7 @@ using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using RunReplays.Commands;
 
-namespace STS2Twitch;
+namespace STS2Twitch.Overlays;
 
 public static class CardVoteOverlay
 {
