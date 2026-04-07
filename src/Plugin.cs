@@ -19,6 +19,7 @@ public class Plugin
 {
     private static TwitchIrcClient? _ircClient;
     private static VoteExecutioner? _voteExecutioner;
+    private static CharacterVoteController? _charVoteController;
     private static bool _signalConnected;
 
     public static void Initialize()
@@ -50,6 +51,7 @@ public class Plugin
 
         _ircClient = new TwitchIrcClient(config);
         _voteExecutioner = new VoteExecutioner();
+        _charVoteController = new CharacterVoteController();
         _ircClient.OnMessageReceived += (username, message) =>
         {
             PlayerActionBuffer.LogMigrationWarning($"[Chat] {username}: {message}");
@@ -62,14 +64,16 @@ public class Plugin
             }
 
             _voteExecutioner.OnChatMessage(username, message);
+            _charVoteController.OnChatMessage(username, message);
         };
         _ircClient.Start();
         GD.Print("[TwitchVoteController] IRC client started.");
     }
 
-    public static void SetupVoteExecutioner(Node parent)
+    public static void SetupVoteExecutioner(NGame game)
     {
-        _voteExecutioner?.Initialize(_ircClient!, parent);
+        _voteExecutioner?.Initialize(_ircClient!, game);
+        _charVoteController?.Initialize(_ircClient!, game);
     }
 
     public static void TryConnectSignal()
@@ -94,6 +98,11 @@ public class Plugin
     {
         PlayerActionBuffer.LogMigrationWarning("[TwitchVoteController] InputRequired signal received.");
         StartOrRestartVote();
+    }
+
+    public static void StartCharacterVote()
+    {
+        _charVoteController?.StartCharacterVote();
     }
 
     public static void StartOrRestartVote()
