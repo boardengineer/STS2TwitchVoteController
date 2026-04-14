@@ -22,7 +22,7 @@ public class TwitchConfig
         {
             PlayerActionBuffer.LogMigrationWarning(
                 $"[TwitchVoteController] Config file not found at: {path}\n" +
-                "[TwitchVoteController] Create TwitchVoteController.config.json with:\n" +
+                "[TwitchVoteController] Create TwitchVoteController.config.json in %APPDATA%\\SlayTheSpire2\\ with:\n" +
                 "[TwitchVoteController] {\"channel\": \"your_channel\", \"username\": \"your_username\", \"oauthToken\": \"oauth:your_token\"}\n" +
                 "[TwitchVoteController] Get your OAuth token from https://twitchapps.com/tmi/");
             return null;

@@ -37,9 +37,11 @@ public class Plugin
             GD.Print($"[TwitchVoteController] Harmony patch error: {ex.Message}");
         }
 
-        var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        GD.Print($"[TwitchVoteController] Assembly location: {assemblyDir}");
-        var configPath = Path.Combine(assemblyDir ?? ".", "TwitchVoteController.config.json");
+        var configDir = Path.Combine(
+            System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData),
+            "SlayTheSpire2");
+        Directory.CreateDirectory(configDir);
+        var configPath = Path.Combine(configDir, "TwitchVoteController.config.json");
         GD.Print($"[TwitchVoteController] Looking for config at: {configPath}");
 
         var config = TwitchConfig.Load(configPath);
@@ -78,12 +80,24 @@ public class Plugin
 
     public static void TryConnectSignal()
     {
-        if (_signalConnected || _ircClient == null)
+        if (_signalConnected)
+        {
+            GD.Print("[TwitchVoteController] TryConnectSignal: already connected, skipping.");
             return;
+        }
+
+        if (_ircClient == null)
+        {
+            GD.Print("[TwitchVoteController] TryConnectSignal: IRC client is null (config missing?).");
+            return;
+        }
 
         var emitter = ReplayDispatcher.Emitter;
         if (emitter == null || !GodotObject.IsInstanceValid((GodotObject)(object)emitter))
+        {
+            GD.Print("[TwitchVoteController] TryConnectSignal: ReplayDispatcher.Emitter is null or invalid.");
             return;
+        }
 
         ((GodotObject)emitter).Connect(
             "InputRequired",
@@ -108,11 +122,17 @@ public class Plugin
     public static void StartOrRestartVote()
     {
         if (_voteExecutioner == null)
+        {
+            GD.Print("[TwitchVoteController] StartOrRestartVote: VoteExecutioner is null.");
             return;
+        }
 
         var commands = ReplayDispatcher.GetAvailableCommands();
         if (commands == null || commands.Count == 0)
+        {
+            GD.Print("[TwitchVoteController] StartOrRestartVote: No available commands.");
             return;
+        }
 
         if (_voteExecutioner.AwaitingProceedAfterShop)
         {
@@ -205,18 +225,18 @@ public class MainMenuPatch
 public class NewRunStartPatch
 {
     [HarmonyPrefix]
-    public static void Prefix()
-    {
-        RunStartHelper.Activate();
-    }
+    public static void Prefix() => RunStartHelper.Activate();
+
+    [HarmonyPostfix]
+    public static void Postfix() => Plugin.TryConnectSignal();
 }
 
 [HarmonyPatch(typeof(RunManager), nameof(RunManager.SetUpSavedSinglePlayer))]
 public class SavedRunStartPatch
 {
     [HarmonyPrefix]
-    public static void Prefix()
-    {
-        RunStartHelper.Activate();
-    }
+    public static void Prefix() => RunStartHelper.Activate();
+
+    [HarmonyPostfix]
+    public static void Postfix() => Plugin.TryConnectSignal();
 }

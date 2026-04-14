@@ -6,8 +6,11 @@ using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Saves;
 using RunReplays;
+using STS2Twitch.Overlays;
 namespace STS2Twitch;
 
 public class CharacterVoteController
@@ -22,6 +25,8 @@ public class CharacterVoteController
     private readonly Dictionary<string, int> _votes = new();
     private bool _voteActive;
     private List<CharacterModel> _characters = new();
+    private NCharacterSelectScreen? _charSelectScreen;
+    private int _displayedLeaderIndex = -1;
 
     public bool IsVoteActive => _voteActive;
 
@@ -61,6 +66,8 @@ public class CharacterVoteController
         if (_voteActive || _gameInstance == null || _ircClient == null)
             return;
 
+        NavigateToCharacterSelect();
+
         _characters = ModelDb.AllCharacters
             .Where(c => c is not RandomCharacter)
             .ToList();
@@ -73,6 +80,21 @@ public class CharacterVoteController
 
         PlayerActionBuffer.LogMigrationWarning($"[CharacterVote] Found {_characters.Count} characters: {string.Join(", ", _characters.Select(c => c.Id.Entry))}");
         BeginVote();
+    }
+
+    private void NavigateToCharacterSelect()
+    {
+        var mainMenu = NGame.Instance?.MainMenu;
+        if (mainMenu == null)
+        {
+            PlayerActionBuffer.LogMigrationWarning("[CharacterVote] Not at main menu, skipping navigation to character select.");
+            return;
+        }
+
+        _charSelectScreen = mainMenu.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>();
+        _charSelectScreen.InitializeSingleplayer();
+        mainMenu.SubmenuStack.Push(_charSelectScreen);
+        PlayerActionBuffer.LogMigrationWarning("[CharacterVote] Navigated to character select screen.");
     }
 
     private void BeginVote()
@@ -212,6 +234,9 @@ public class CharacterVoteController
         _displayTimer?.Stop();
         if (_timerLabel != null)
             _timerLabel.Visible = false;
+        CharacterVoteOverlay.ClearLabels();
+        _charSelectScreen = null;
+        _displayedLeaderIndex = -1;
     }
 
     private void UpdateTimerDisplay()
@@ -221,5 +246,36 @@ public class CharacterVoteController
 
         var remaining = Math.Ceiling(_voteTimer.TimeLeft);
         _timerLabel.Text = $"Vote: {remaining:0}s";
+
+        if (_charSelectScreen != null && GodotObject.IsInstanceValid(_charSelectScreen))
+        {
+            CharacterVoteOverlay.Refresh(_charSelectScreen, _characters, _votes);
+            UpdateLeaderSelection();
+        }
+    }
+
+    private void UpdateLeaderSelection()
+    {
+        if (_charSelectScreen == null || _votes.Count == 0)
+            return;
+
+        var tally = new Dictionary<int, int>();
+        foreach (var choice in _votes.Values)
+        {
+            tally.TryGetValue(choice, out var count);
+            tally[choice] = count + 1;
+        }
+
+        var maxVotes = tally.Values.Max();
+        var leaderIndex = tally
+            .Where(kv => kv.Value == maxVotes)
+            .Min(kv => kv.Key) - 1;
+
+        if (leaderIndex == _displayedLeaderIndex)
+            return;
+
+        _displayedLeaderIndex = leaderIndex;
+        var button = CharacterVoteOverlay.FindButton(_charSelectScreen, _characters[leaderIndex]);
+        button?.Select();
     }
 }
