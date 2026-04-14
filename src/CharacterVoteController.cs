@@ -15,7 +15,7 @@ namespace STS2Twitch;
 
 public class CharacterVoteController
 {
-    private const double VoteDuration = 10.0;
+    private const double VoteDuration = 5.0;
 
     private TwitchIrcClient? _ircClient;
     private NGame? _gameInstance;
@@ -32,6 +32,16 @@ public class CharacterVoteController
 
     public void Initialize(TwitchIrcClient client, NGame game)
     {
+        // Clean up any nodes from a previous initialize (e.g. returning to main menu mid-vote)
+        HideTimer();
+        if (_voteTimer != null && GodotObject.IsInstanceValid(_voteTimer)) _voteTimer.QueueFree();
+        if (_displayTimer != null && GodotObject.IsInstanceValid(_displayTimer)) _displayTimer.QueueFree();
+        if (_timerLabel != null && GodotObject.IsInstanceValid(_timerLabel)) _timerLabel.QueueFree();
+        _voteTimer = null;
+        _displayTimer = null;
+        _timerLabel = null;
+        _voteActive = false;
+
         _ircClient = client;
         _gameInstance = game;
 
@@ -74,11 +84,11 @@ public class CharacterVoteController
 
         if (_characters.Count == 0)
         {
-            PlayerActionBuffer.LogMigrationWarning("[CharacterVote] No characters found.");
+            GD.Print("[CharacterVote] No characters found.");
             return;
         }
 
-        PlayerActionBuffer.LogMigrationWarning($"[CharacterVote] Found {_characters.Count} characters: {string.Join(", ", _characters.Select(c => c.Id.Entry))}");
+        GD.Print($"[CharacterVote] Found {_characters.Count} characters: {string.Join(", ", _characters.Select(c => c.Id.Entry))}");
         BeginVote();
     }
 
@@ -87,14 +97,14 @@ public class CharacterVoteController
         var mainMenu = NGame.Instance?.MainMenu;
         if (mainMenu == null)
         {
-            PlayerActionBuffer.LogMigrationWarning("[CharacterVote] Not at main menu, skipping navigation to character select.");
+            GD.Print("[CharacterVote] Not at main menu, skipping navigation to character select.");
             return;
         }
 
         _charSelectScreen = mainMenu.SubmenuStack.GetSubmenuType<NCharacterSelectScreen>();
         _charSelectScreen.InitializeSingleplayer();
         mainMenu.SubmenuStack.Push(_charSelectScreen);
-        PlayerActionBuffer.LogMigrationWarning("[CharacterVote] Navigated to character select screen.");
+        GD.Print("[CharacterVote] Navigated to character select screen.");
     }
 
     private void BeginVote()
@@ -108,7 +118,7 @@ public class CharacterVoteController
         {
             var message = $"Only character: {_characters[0].Id.Entry}. Selecting in 5s...";
             _ircClient.SendMessage(message);
-            PlayerActionBuffer.LogMigrationWarning($"[CharacterVote] {message}");
+            GD.Print($"[CharacterVote] {message}");
             _voteTimer.WaitTime = 5.0;
             _voteTimer.Start();
             _voteActive = true;
@@ -119,7 +129,7 @@ public class CharacterVoteController
         var indexed = _characters.Select((c, i) => $"{i + 1}: {c.Id.Entry}");
         var chatMessage = "Vote for character! " + string.Join(", ", indexed);
         _ircClient.SendMessage(chatMessage);
-        PlayerActionBuffer.LogMigrationWarning($"[CharacterVote] {chatMessage}");
+        GD.Print($"[CharacterVote] {chatMessage}");
 
         _voteTimer.WaitTime = VoteDuration;
         _voteTimer.Start();
@@ -191,7 +201,7 @@ public class CharacterVoteController
             ? $"Vote result: {winnerName} ({winnerVotes} votes)"
             : $"Selecting: {winnerName}";
         _ircClient?.SendMessage(resultMsg);
-        PlayerActionBuffer.LogMigrationWarning($"[CharacterVote] {resultMsg}");
+        GD.Print($"[CharacterVote] {resultMsg}");
 
         StartRunWithCharacter(winner);
     }
@@ -207,7 +217,7 @@ public class CharacterVoteController
         var seed = SeedHelper.GetRandomSeed();
         var acts = ActModel.GetDefaultList();
 
-        PlayerActionBuffer.LogMigrationWarning(
+        GD.Print(
             $"[CharacterVote] Starting run: {character.Id.Entry}, Ascension {ascension}, Seed {seed}");
 
         try
@@ -217,7 +227,7 @@ public class CharacterVoteController
         }
         catch (Exception ex)
         {
-            PlayerActionBuffer.LogMigrationWarning($"[CharacterVote] Failed to start run: {ex}");
+            GD.Print($"[CharacterVote] Failed to start run: {ex}");
         }
     }
 

@@ -14,7 +14,7 @@ public class VoteExecutioner
     private static readonly FieldInfo? ReplayActiveField =
         typeof(ReplayEngine).GetField("_replayActive", BindingFlags.Static | BindingFlags.NonPublic);
 
-    private const double VoteDuration = 10.0;
+    private const double VoteDuration = 5.0;
     private const double SingleOptionDelay = 5.0;
 
     private TwitchIrcClient? _ircClient;
@@ -32,6 +32,16 @@ public class VoteExecutioner
 
     public void Initialize(TwitchIrcClient client, Node timerParent)
     {
+        // Clean up any nodes from a previous initialize (e.g. returning to main menu mid-vote)
+        HideTimer();
+        if (_voteTimer != null && GodotObject.IsInstanceValid(_voteTimer)) _voteTimer.QueueFree();
+        if (_displayTimer != null && GodotObject.IsInstanceValid(_displayTimer)) _displayTimer.QueueFree();
+        if (_timerLabel != null && GodotObject.IsInstanceValid(_timerLabel)) _timerLabel.QueueFree();
+        _voteTimer = null;
+        _displayTimer = null;
+        _timerLabel = null;
+        _voteActive = false;
+
         _ircClient = client;
 
         _voteTimer = new Timer();
@@ -78,7 +88,7 @@ public class VoteExecutioner
             _options = new List<ReplayCommand> { autoCmd };
             var message = $"Only option: {desc}. Executing in {SingleOptionDelay:0}s...";
             _ircClient.SendMessage(message);
-            PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] {message}");
+            GD.Print($"[TwitchVoteController] {message}");
             _voteTimer.WaitTime = SingleOptionDelay;
             _voteTimer.Start();
             _voteActive = true;
@@ -90,7 +100,7 @@ public class VoteExecutioner
         var indexed = descriptions.Select((d, i) => $"{i + 1}: {d}");
         var chatMessage = "Vote now! " + string.Join(", ", indexed);
         _ircClient.SendMessage(chatMessage);
-        PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] {chatMessage}");
+        GD.Print($"[TwitchVoteController] {chatMessage}");
 
         _voteTimer.WaitTime = VoteDuration;
         _voteTimer.Start();
@@ -163,7 +173,7 @@ public class VoteExecutioner
             ? $"Vote result: {desc} ({winnerVotes} votes)"
             : $"Executing: {desc}";
         _ircClient?.SendMessage(resultMsg);
-        PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] {resultMsg}");
+        GD.Print($"[TwitchVoteController] {resultMsg}");
 
         ReplayActiveField?.SetValue(null, true);
         ReplayDispatcher.GameSpeed = 1.0f;
@@ -192,7 +202,16 @@ public class VoteExecutioner
         else if (winner is TakeChestRelicCommand)
             TreasureState = ChestState.RelicTaken;
 
-        PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Executed: {winner} (success={result.Success})");
+        var followupCommands = ReplayDispatcher.GetAvailableCommands();
+        var followupSummary = followupCommands == null || followupCommands.Count == 0
+            ? "none"
+            : string.Join(", ", followupCommands.Select(c => c.GetType().Name));
+
+        GD.Print(
+            $"[TwitchVoteController] Executed {winner.GetType().Name} (success={result.Success}) | " +
+            $"post-execute availableCommands=[{followupSummary}] | " +
+            $"AwaitingMapMove={AwaitingMapMove} ShopOpened={ShopOpened} " +
+            $"AwaitingProceedAfterShop={AwaitingProceedAfterShop} TreasureState={TreasureState}");
     }
 
     private void ShowTimer()

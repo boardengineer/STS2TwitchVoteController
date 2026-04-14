@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Godot;
 using RunReplays;
 
 namespace STS2Twitch;
@@ -20,7 +21,7 @@ public class TwitchConfig
     {
         if (!File.Exists(path))
         {
-            PlayerActionBuffer.LogMigrationWarning(
+            GD.Print(
                 $"[TwitchVoteController] Config file not found at: {path}\n" +
                 "[TwitchVoteController] Create TwitchVoteController.config.json in %APPDATA%\\SlayTheSpire2\\ with:\n" +
                 "[TwitchVoteController] {\"channel\": \"your_channel\", \"username\": \"your_username\", \"oauthToken\": \"oauth:your_token\"}\n" +
@@ -34,7 +35,7 @@ public class TwitchConfig
         if (config == null || string.IsNullOrWhiteSpace(config.Channel) ||
             string.IsNullOrWhiteSpace(config.Username) || string.IsNullOrWhiteSpace(config.OauthToken))
         {
-            PlayerActionBuffer.LogMigrationWarning("[TwitchVoteController] Config file is missing required fields (channel, username, oauthToken).");
+            GD.Print("[TwitchVoteController] Config file is missing required fields (channel, username, oauthToken).");
             return null;
         }
 

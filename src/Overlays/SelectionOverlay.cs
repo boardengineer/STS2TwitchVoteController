@@ -70,7 +70,7 @@ public static class SelectionOverlay
     private static void TryOverlayRewardButtons(List<ReplayCommand> options, Dictionary<int, int> tally)
     {
         var screen = ReplayState.ActiveRewardsScreen;
-        if (screen == null || !screen.IsInsideTree())
+        if (screen == null || !GodotObject.IsInstanceValid(screen) || !screen.IsInsideTree())
             return;
 
         // Find reward buttons the same way RunReplays does internally
@@ -127,7 +127,7 @@ public static class SelectionOverlay
     private static void TryOverlayChooseACard(List<ReplayCommand> options, Dictionary<int, int> tally)
     {
         var screen = CommandDescriber.GetChooseACardScreen();
-        if (screen == null)
+        if (screen == null || !GodotObject.IsInstanceValid(screen) || !screen.IsInsideTree())
             return;
 
         for (int i = 0; i < options.Count; i++)
@@ -149,7 +149,7 @@ public static class SelectionOverlay
     private static void TryOverlayGridCards(List<ReplayCommand> options, Dictionary<int, int> tally)
     {
         var screen = CommandDescriber.GetCardGridScreen();
-        if (screen == null)
+        if (screen == null || !GodotObject.IsInstanceValid(screen) || !screen.IsInsideTree())
             return;
 
         for (int i = 0; i < options.Count; i++)
@@ -176,7 +176,7 @@ public static class SelectionOverlay
     private static void TryOverlayGridConfirmCancel(List<ReplayCommand> options, Dictionary<int, int> tally)
     {
         var screen = CommandDescriber.GetCardGridScreen();
-        if (screen == null)
+        if (screen == null || !GodotObject.IsInstanceValid(screen) || !screen.IsInsideTree())
             return;
 
         var hasConfirm = options.Any(o => o is ConfirmGridSelectionCommand);

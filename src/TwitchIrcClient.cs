@@ -52,7 +52,7 @@ public class TwitchIrcClient
             }
             catch (Exception ex)
             {
-                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Failed to send message: {ex.Message}");
+                GD.Print($"[TwitchVoteController] Failed to send message: {ex.Message}");
             }
         });
     }
@@ -95,13 +95,13 @@ public class TwitchIrcClient
             }
             catch (Exception ex)
             {
-                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Connection error: {ex.Message}");
+                GD.Print($"[TwitchVoteController] Connection error: {ex.Message}");
                 Cleanup();
 
                 if (ct.IsCancellationRequested)
                     break;
 
-                PlayerActionBuffer.LogMigrationWarning($"[TwitchVoteController] Reconnecting in {reconnectDelay}s...");
+                GD.Print($"[TwitchVoteController] Reconnecting in {reconnectDelay}s...");
                 try
                 {
                     await Task.Delay(reconnectDelay * 1000, ct);
@@ -116,7 +116,7 @@ public class TwitchIrcClient
         }
 
         Cleanup();
-        PlayerActionBuffer.LogMigrationWarning("[TwitchVoteController] Disconnected from Twitch IRC.");
+        GD.Print("[TwitchVoteController] Disconnected from Twitch IRC.");
     }
 
     private async Task ReadLoopAsync(CancellationToken ct)
@@ -135,7 +135,7 @@ public class TwitchIrcClient
 
             if (line.Contains("Login authentication failed"))
             {
-                PlayerActionBuffer.LogMigrationWarning("[TwitchVoteController] Authentication failed. Check your OAuth token.");
+                GD.Print("[TwitchVoteController] Authentication failed. Check your OAuth token.");
                 throw new InvalidOperationException("Auth failed");
             }
 

@@ -16,14 +16,14 @@ public static class KeyboardShortcuts
         
         if (keyEvent.Keycode == Key.F5 && keyEvent.CtrlPressed)
         {
-            PlayerActionBuffer.LogMigrationWarning("[KeyboardShortcuts] Ctrl+F5 pressed, starting character vote");
+            GD.Print("[KeyboardShortcuts] Ctrl+F5 pressed, starting character vote");
             Plugin.StartCharacterVote();
             return;
         }
 
         if (keyEvent.Keycode == Key.F5)
         {
-            PlayerActionBuffer.LogMigrationWarning("[KeyboardShortcuts] F5 pressed, starting/restarting vote");
+            GD.Print("[KeyboardShortcuts] F5 pressed, starting/restarting vote");
             Plugin.StartOrRestartVote();
         }
     }

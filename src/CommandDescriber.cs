@@ -56,6 +56,12 @@ public static class CommandDescriber
         if (command is SelectHandCardsCommand handCmd)
             return (0, handCmd.HandIndices.Length > 0 ? handCmd.HandIndices[0] : 999, Describe(command));
 
+        if (command is ConfirmGridSelectionCommand)
+            return (1, 0, Describe(command));
+
+        if (command is CancelGridSelectionCommand)
+            return (1, 1, Describe(command));
+
         if (command is UsePotionCommand or DiscardPotionCommand)
             return (2, 0, Describe(command));
 
@@ -186,10 +192,12 @@ public static class CommandDescriber
     }
 
     private static readonly FieldInfo? ChooseACardActiveScreenField =
-        typeof(ChooseACardScreenCapture).GetField("ActiveScreen", BindingFlags.Static | BindingFlags.NonPublic);
+        typeof(ChooseACardScreenCapture).GetField("ActiveScreen",
+            BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
 
     private static readonly FieldInfo? CardGridActiveScreenField =
-        typeof(CardGridScreenCapture).GetField("ActiveScreen", BindingFlags.Static | BindingFlags.NonPublic);
+        typeof(CardGridScreenCapture).GetField("ActiveScreen",
+            BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
 
     private static readonly FieldInfo? CardGridCardsField =
         typeof(NCardGridSelectionScreen).GetField("_cards", BindingFlags.Instance | BindingFlags.NonPublic);
